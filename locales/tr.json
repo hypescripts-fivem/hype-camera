@@ -1,0 +1,91 @@
+{
+    "title": "Güvenlik Kameraları",
+    "target_label": "Güvenlik Kameraları",
+    "notify": {
+        "no_access": "Güvenlik kameralarına erişim yetkin yok.",
+        "offline": "Bu kamera şu anda çevrimdışı.",
+        "invalid": "Kameraya bağlanılamadı.",
+        "copied": "Kamera konumu panoya kopyalandı.",
+        "status_set": "%s kamerası: %s"
+    },
+    "ui": {
+        "subtitle": "Kapalı Devre Kamera Ağı",
+        "search": "Kamera ara...",
+        "all": "Tüm Kameralar",
+        "online": "ÇEVRİMİÇİ",
+        "offline": "ÇEVRİMDIŞI",
+        "online_count": "%s / %s çevrimiçi",
+        "no_results": "Kamera bulunamadı",
+        "connect": "BAĞLAN",
+        "close": "Kapat",
+        "no_signal": "SİNYAL YOK",
+        "destroyed": "HASARLI",
+        "destroyed_sub": "Kamera hasar gördü · %s sonra çevrimiçi",
+        "connecting": "BAĞLANILIYOR",
+        "connecting_sub": "Görüntü akışı başlatılıyor",
+        "signal_lost": "SİNYAL KESİLDİ",
+        "signal_lost_sub": "Kamera ile bağlantı kurulamıyor",
+        "rec": "REC",
+        "live": "CANLI",
+        "channel": "KANAL %s / %s",
+        "pan": "PAN",
+        "tilt": "TILT",
+        "zoom": "ZOOM",
+        "fov": "FOV",
+        "heading": "YÖN",
+        "controls": {
+            "move": "Yönlendir",
+            "zoom": "Yakınlaştır",
+            "switch": "Kamera",
+            "fast": "Hızlı",
+            "back": "Liste",
+            "exit": "Çıkış"
+        },
+        "compass": {
+            "n": "K",
+            "ne": "KD",
+            "e": "D",
+            "se": "GD",
+            "s": "G",
+            "sw": "GB",
+            "w": "B",
+            "nw": "KB"
+        },
+        "face": {
+            "title": "YÜZ TANIMA",
+            "scanning": "ANALİZ EDİLİYOR",
+            "scanning_sub": "Yüz hatları çıkarılıyor",
+            "matching": "VERİTABANI SORGULANIYOR",
+            "matching_sub": "Nüfus kayıtları taranıyor",
+            "far": "ÇÖZÜNÜRLÜK YETERSİZ",
+            "far_sub": "Tanımlamak için yakınlaştırın",
+            "masked": "EŞLEŞME YOK",
+            "masked_sub": "Yüz maske ile gizlenmiş",
+            "obscured": "YÜZ ALGILANAMADI",
+            "obscured_sub": "Şahıs kameraya dönük değil",
+            "identified": "EŞLEŞME BULUNDU",
+            "distance": "MESAFE",
+            "match": "EŞLEŞME",
+            "subject": "ŞAHIS",
+            "name": "AD SOYAD",
+            "birthdate": "DOĞUM TARİHİ",
+            "gender": "CİNSİYET",
+            "nationality": "UYRUK",
+            "citizenid": "KİMLİK NO",
+            "job": "MESLEK",
+            "phone": "TELEFON",
+            "male": "Erkek",
+            "female": "Kadın"
+        },
+        "log": {
+            "title": "TESPİT KAYDI",
+            "masked": "Maskeli şahıs"
+        },
+        "error": {
+            "offline": "Kamera çevrimdışı",
+            "no_access": "Erişim yetkin yok",
+            "invalid": "Kameraya bağlanılamadı",
+            "busy": "Bağlantı kuruluyor, bekleyin"
+        }
+    }
+}

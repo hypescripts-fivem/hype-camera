@@ -1,0 +1,91 @@
+{
+    "title": "Security Cameras",
+    "target_label": "Security Cameras",
+    "notify": {
+        "no_access": "You don't have access to the security cameras.",
+        "offline": "This camera is currently offline.",
+        "invalid": "Could not connect to the camera.",
+        "copied": "Camera position copied to clipboard.",
+        "status_set": "Camera %s: %s"
+    },
+    "ui": {
+        "subtitle": "Closed Circuit Camera Network",
+        "search": "Search cameras...",
+        "all": "All Cameras",
+        "online": "ONLINE",
+        "offline": "OFFLINE",
+        "online_count": "%s / %s online",
+        "no_results": "No cameras found",
+        "connect": "CONNECT",
+        "close": "Close",
+        "no_signal": "NO SIGNAL",
+        "destroyed": "DAMAGED",
+        "destroyed_sub": "Camera damaged · back online in %s",
+        "connecting": "CONNECTING",
+        "connecting_sub": "Starting video stream",
+        "signal_lost": "SIGNAL LOST",
+        "signal_lost_sub": "Unable to reach the camera",
+        "rec": "REC",
+        "live": "LIVE",
+        "channel": "CHANNEL %s / %s",
+        "pan": "PAN",
+        "tilt": "TILT",
+        "zoom": "ZOOM",
+        "fov": "FOV",
+        "heading": "HDG",
+        "controls": {
+            "move": "Steer",
+            "zoom": "Zoom",
+            "switch": "Camera",
+            "fast": "Fast",
+            "back": "List",
+            "exit": "Exit"
+        },
+        "compass": {
+            "n": "N",
+            "ne": "NE",
+            "e": "E",
+            "se": "SE",
+            "s": "S",
+            "sw": "SW",
+            "w": "W",
+            "nw": "NW"
+        },
+        "face": {
+            "title": "FACE RECOGNITION",
+            "scanning": "ANALYZING",
+            "scanning_sub": "Extracting facial features",
+            "matching": "QUERYING DATABASE",
+            "matching_sub": "Searching civil records",
+            "far": "LOW RESOLUTION",
+            "far_sub": "Zoom in to identify",
+            "masked": "NO MATCH",
+            "masked_sub": "Face is covered by a mask",
+            "obscured": "NO FACE DETECTED",
+            "obscured_sub": "Subject is not facing the camera",
+            "identified": "MATCH FOUND",
+            "distance": "DISTANCE",
+            "match": "MATCH",
+            "subject": "SUBJECT",
+            "name": "NAME",
+            "birthdate": "DATE OF BIRTH",
+            "gender": "GENDER",
+            "nationality": "NATIONALITY",
+            "citizenid": "CITIZEN ID",
+            "job": "OCCUPATION",
+            "phone": "PHONE",
+            "male": "Male",
+            "female": "Female"
+        },
+        "log": {
+            "title": "DETECTION LOG",
+            "masked": "Masked subject"
+        },
+        "error": {
+            "offline": "Camera offline",
+            "no_access": "Access denied",
+            "invalid": "Could not connect",
+            "busy": "Connecting, please wait"
+        }
+    }
+}
