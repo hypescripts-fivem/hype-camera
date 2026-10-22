@@ -147,12 +147,18 @@ lib.callback.register("hype-camera:server:identify", function(source, target)
     end
 
     local now = GetGameTimer()
-    if lastIdentify[source] and now - lastIdentify[source] < IDENTIFY_COOLDOWN then return nil end
+    if lastIdentify[source] and now - lastIdentify[source] < IDENTIFY_COOLDOWN then
+        Debug("warning", "identity request from %s ignored: cooldown (%sms)", source, IDENTIFY_COOLDOWN)
+        return nil
+    end
     lastIdentify[source] = now
 
     target = tonumber(target)
     local info = target and Framework.Server.GetCharacterInfo and Framework.Server.GetCharacterInfo(target)
-    if not info then return nil end
+    if not info then
+        Debug("error", "no character info for %s (framework: %s) - is the target logged in to a character?", tostring(target), Framework.Name or "none")
+        return nil
+    end
 
     local ped = GetPlayerPed(target)
     if ped == 0 or #(GetEntityCoords(ped) - camera.coords) > Config.Recognition.maxDistance + 10.0 then

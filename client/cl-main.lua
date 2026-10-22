@@ -46,6 +46,7 @@ local identities, failedAt, pending = {}, {}, {}
 local headshots = {}
 local lock = nil
 local lastTargetKey, lastHudKey = nil, nil
+local lastDebugReason, debugHead, debugHit = nil, nil, nil
 
 --#region Helpers
 
@@ -65,6 +66,16 @@ end
 local function round(value, decimals)
     local mult = 10 ^ (decimals or 0)
     return math.floor(value * mult + 0.5) / mult
+end
+
+---Prints why recognition is (not) working, only when the reason changes so the console is not flooded.
+---@param reason string Short key of the current state
+---@param message string Format string
+---@param ... any Format arguments
+local function debugRecognition(reason, message, ...)
+    if not Config.Debug or reason == lastDebugReason then return end
+    lastDebugReason = reason
+    Debug(reason:find("^identified") and "success" or "info", "[recognition] " .. message, ...)
 end
 
 local function normalizeAngle(angle)
@@ -141,15 +152,15 @@ local function isFaceHidden(ped)
     local drawable = GetPedDrawableVariation(ped, mask.component)
 
     if drawable > 0 then
-        if mask.anyDrawable or maskLookup.all[drawable] then return true end
-
         local modelList = maskLookup[GetEntityModel(ped)]
-        if modelList and modelList[drawable] then return true end
+        if mask.anyDrawable or maskLookup.all[drawable] or (modelList and modelList[drawable]) then
+            return true, ("component %s drawable %s"):format(mask.component, drawable)
+        end
     end
 
     for prop, list in pairs(propLookup) do
         local index = GetPedPropIndex(ped, prop)
-        if index ~= -1 and list[index] then return true end
+        if index ~= -1 and list[index] then return true, ("prop %s drawable %s"):format(prop, index) end
     end
 
     return false
@@ -159,10 +170,11 @@ local function isFacing(ped, camCoords, head)
     local forward = GetEntityForwardVector(ped)
     local dx, dy = camCoords.x - head.x, camCoords.y - head.y
     local length = math.sqrt(dx * dx + dy * dy)
-    if length < 0.05 then return true end
+    if length < 0.05 then return true, 0.0 end
 
     local dot = (forward.x * dx + forward.y * dy) / length
-    return math.deg(math.acos(clamp(dot, -1.0, 1.0))) <= Config.Recognition.facingAngle
+    local angle = math.deg(math.acos(clamp(dot, -1.0, 1.0)))
+    return angle <= Config.Recognition.facingAngle, angle
 end
 
 local function hasLineOfSight(from, to, ignore)
@@ -171,8 +183,13 @@ local function hasLineOfSight(from, to, ignore)
     from = from + dir / #dir * 0.35
 
     local handle = StartExpensiveSynchronousShapeTestLosProbe(from.x, from.y, from.z, to.x, to.y, to.z, SHAPE_TEST_FLAGS, ignore or 0, 4)
-    local _, hit = GetShapeTestResult(handle)
-    return hit == 0
+    local _, hit, endCoords, _, entity = GetShapeTestResult(handle)
+    -- hit is a boolean in FiveM's Lua runtime (false ~= 0), accept the integer form as well
+    if hit ~= true and hit ~= 1 then return true end
+
+    ---@type table Debug: what blocked the ray
+    local blocker = { coords = endCoords, fromLens = #(endCoords - from) + 0.35, toHead = #(to - endCoords), entity = entity }
+    return false, blocker
 end
 
 local function effectiveRange()
@@ -240,6 +257,7 @@ local function requestIdentity(serverId, now)
             identities[serverId] = data
         else
             failedAt[serverId] = GetGameTimer()
+            Debug("error", "[recognition] server returned no identity for %s, retrying in 2.5s (see the server console)", serverId)
         end
     end)
 end
@@ -247,6 +265,7 @@ end
 local function findTarget(camCoords, forward)
     local recognition = Config.Recognition
     local best, bestAngle
+    local closest -- Debug: the player nearest to the crosshair, even outside the aim radius
 
     for _, player in ipairs(GetActivePlayers()) do
         if player ~= cache.playerId or Config.Debug then
@@ -267,20 +286,62 @@ local function findTarget(camCoords, forward)
                         best = { player = player, ped = ped, head = head, distance = distance }
                         bestAngle = angle
                     end
+
+                    if Config.Debug and (not closest or angle < closest.angle) then
+                        closest = { player = player, head = head, distance = distance, angle = angle, tolerance = tolerance }
+                    end
                 end
             end
         end
     end
 
-    return best
+    return best, closest
 end
 
 local function updateTarget(now)
-    if signalLost then return clearTarget() end
+    debugHead, debugHit = nil, nil
+    if signalLost then
+        debugRecognition("signal", "signal lost, recognition paused")
+        return clearTarget()
+    end
 
     local camCoords = GetCamCoord(cam)
-    local target = findTarget(camCoords, rotationToDirection(view.pitch, view.yaw))
-    if target and not hasLineOfSight(camCoords, target.head, GetCameraProp(viewing.id)) then target = nil end
+    local target, closest = findTarget(camCoords, rotationToDirection(view.pitch, view.yaw))
+
+    if Config.Debug then
+        debugHead = closest and closest.head
+        if not closest then
+            debugRecognition("none", "no living, visible player within maxDistance (%.0fm)%s", Config.Recognition.maxDistance,
+                #GetActivePlayers() <= 1 and " - you are the only player in scope (OneSync culling?)" or "")
+        elseif not target then
+            debugRecognition("aim:" .. GetPlayerServerId(closest.player), "player %s is %.1f deg off the crosshair, allowed %.1f deg (aimRadius %.2fm at %.1fm)",
+                GetPlayerServerId(closest.player), closest.angle, closest.tolerance, Config.Recognition.aimRadius, closest.distance)
+        end
+    end
+
+    if target then
+        local prop = GetCameraProp(viewing.id)
+        local visible, blocker = hasLineOfSight(camCoords, target.head, prop)
+
+        if not visible then
+            if Config.Debug then
+                debugHit = blocker.coords
+                local entity = blocker.entity
+                local what = "world geometry (map collision)"
+                if entity and entity ~= 0 then
+                    -- The ray can return map buildings that are not script entities; the entity natives throw on those
+                    local ok, model, kind = pcall(function() return GetEntityModel(entity), GetEntityType(entity) end)
+                    what = ok and ("entity %s, model %s, type %s"):format(entity, model, kind)
+                        or ("map building %s"):format(entity)
+                    if entity == prop then what = what .. " (the camera prop itself)" end
+                end
+                debugRecognition("los:" .. GetPlayerServerId(target.player),
+                    "line of sight to player %s is blocked by %s at %s - %.2fm from the camera, %.2fm before the head (camera prop: %s)",
+                    GetPlayerServerId(target.player), what, blocker.coords, blocker.fromLens, blocker.toHead, tostring(prop))
+            end
+            target = nil
+        end
+    end
     if not target then return clearTarget() end
 
     local serverId = GetPlayerServerId(target.player)
@@ -291,20 +352,29 @@ local function updateTarget(now)
 
     local recognition = Config.Recognition
     local status
+    local hidden, hiddenBy = isFaceHidden(target.ped)
+    local facing, faceAngle = isFacing(target.ped, camCoords, target.head)
 
     if target.distance > effectiveRange() then
         status = "far"
         lock.since = now
+        debugRecognition("far:" .. serverId, "player %s at %.1fm is beyond the range %.1fm at FOV %.1f (zoom in, maxDistance %.0fm)",
+            serverId, target.distance, effectiveRange(), view.fov, recognition.maxDistance)
     elseif now - lock.since < recognition.scanTime then
         status = "scanning"
-    elseif isFaceHidden(target.ped) then
+        debugRecognition("scanning:" .. serverId, "scanning player %s (%sms)", serverId, recognition.scanTime)
+    elseif hidden then
         status = "masked"
-    elseif recognition.requireFacing and not isFacing(target.ped, camCoords, target.head) then
+        debugRecognition("masked:" .. serverId, "player %s is masked: %s", serverId, hiddenBy)
+    elseif recognition.requireFacing and not facing then
         status = "obscured"
+        debugRecognition("obscured:" .. serverId, "player %s faces away: %.0f deg from the camera, allowed %.0f deg", serverId, faceAngle, recognition.facingAngle)
     elseif identities[serverId] then
         status = "identified"
+        debugRecognition("identified:" .. serverId, "player %s identified", serverId)
     else
         status = "matching"
+        debugRecognition("matching:" .. serverId, "requesting the identity of player %s from the server", serverId)
         requestIdentity(serverId, now)
     end
 
@@ -579,6 +649,17 @@ function startViewLoop()
                     nextScan = now + 100
                     updateTarget(now)
                     if shouldAbort() then CloseCameras() end
+                end
+
+                -- Debug: marks the head bone of the player nearest to the crosshair
+                if debugHead then
+                    DrawMarker(28, debugHead.x, debugHead.y, debugHead.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.12, 0.12, 0.12, 255, 60, 60, 160, false, false, 2, false, nil, nil, false)
+                end
+                -- Debug: marks where the line of sight ray was blocked
+                if debugHit then
+                    DrawMarker(28, debugHit.x, debugHit.y, debugHit.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.08, 0.08, 0.08, 60, 255, 60, 200, false, false, 2, false, nil, nil, false)
                 end
             end
 
